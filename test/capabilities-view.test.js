@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('assert'),Module=require('module');let header;
+const old=Module._load;Module._load=function(n,p){if(n==='./kit/gauges'&&/getproger_eq_config\/view\.js$/.test(p.filename))return {frame(r,t,tabs,sel){header={tabs,sel};}};return old.apply(this,arguments);};
+const view=require('../apps/getproger_eq_config/view');Module._load=old;
+const M=require('../apps/getproger_eq_config/profile-model'),T=require('../apps/getproger_eq_config/tabs');
+const canvas={clear(){},fillRect(){},line(){},text(){},roundRect(){}};
+const actions={toggleEdit(){},touchEdit(){},toggleSurround(){},save(){},apply(){},reset(){}};
+const s={tab:T.settingsIndex,available:{bass:true,treble:true},draft:M.defaults('Settings'),status:'',targets:[]};
+view.draw(canvas,{},s,actions,{profiles:{}});
+assert.deepStrictEqual(header.tabs,['Debug','Settings']);assert.strictEqual(header.sel,1);
+assert.deepStrictEqual(s.targets.filter(x=>x.key.startsWith('slider-')).map(x=>x.key),['slider-bass','slider-treble']);assert(!s.targets.some(x=>x.key==='surround'));
+s.available.eq100=true;s.tab=2;view.draw(canvas,{},s,actions,{profiles:{}});
+assert(header.tabs.includes('Rock'));assert.deepStrictEqual(s.targets.filter(x=>x.key.startsWith('slider-')).map(x=>x.key),['slider-bass','slider-eq100','slider-treble']);
+s.available.surround=true;view.draw(canvas,{},s,actions,{profiles:{}});assert(s.targets.some(x=>x.key==='surround'));
+console.log('PASS available controls and EQ-dependent navigation');

@@ -1,10 +1,25 @@
 {
   "schema": 1,
-  "components": [{
-    "id": "getproger_eq_config", "kind": "app", "title": "EQ Config",
-    "description": "Winamp genre presets for a calibrated BMW equalizer",
-    "version": "0.0.1", "path": "apps/getproger_eq_config", "icon": "icon.png",
-    "mguHmi": ["ID7"],
-    "build": {"python": "kit/tools/build.py", "args": ["{id}"], "sdk": "oap-sdk", "output": "dist/{id}@{version}.tgz"}
-  }]
+  "components": [
+    {
+      "id": "getproger_eq_config",
+      "kind": "app",
+      "title": "eq_config",
+      "description": "Audio profiles for BMW MGU",
+      "version": "0.0.2",
+      "path": "apps/getproger_eq_config",
+      "icon": "icon.png",
+      "mguHmi": [
+        "ID7"
+      ],
+      "build": {
+        "python": "kit/tools/build.py",
+        "args": [
+          "{id}"
+        ],
+        "sdk": "oap-sdk",
+        "output": "dist/{id}@{version}.tgz"
+      }
+    }
+  ]
 }

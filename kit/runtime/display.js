@@ -93,6 +93,7 @@ class Display {
         this.frames = 0; this.jsMs = 0; this.statT = Date.now();
         this.sheet = null;                           // sheet.js page drawn over the app's (openSheet)
         this.ccuLast = null;                         // last controller state (knob counter, press, push)
+        this.touchTarget = null;                     // continuous control captured on touch down
         this.ownHidden = new Set();                  // more bar buttons left out where the kit runs the screen (hideButton)
         G.onConfirm(() => { this.lastWords = null; this.tickHandlers.forEach((fn) => fn()); });   // a reset asks / runs out
         const canvasScreens = (spec.screens || []).filter((s) => s.kind === 'canvas');
@@ -230,6 +231,7 @@ class Display {
     /** Open header tab i: the app's page, or the settings (Settings tab). */
     _openTab(i) {
         const tl = this._tabList();
+        this.headerAnchor = i;
         if (i === tl.settings) { if (!(this.sheet && this.sheet.settings)) this._click('BTN_SETTINGS'); return; }
         const closed = !!this.sheet;
         this.closeSheet();
@@ -339,6 +341,12 @@ class Display {
             if (tilt === 'W') this._sheetResult(this.sheet.back());
             return;
         }
+        // A target with turn is actively editing; the knob changes its value until pressed again.
+        const editingTarget = (this.pageTargets || []).find((q) => 'tgt:' + q.key === this.focusKey && typeof q.turn === 'function');
+        if (editingTarget && !press) {
+            if (d) { try { editingTarget.turn(d); } catch (e) { this.log.error('target turn', e); } this._repaint(); }
+            if (d || tilt) return;
+        }
         // pushed up / down / left / right: the nearest place that way; left with nothing there goes back (leaves the app)
         if (tilt) {
             const to = this._toward(tilt, here);
@@ -403,6 +411,7 @@ class Display {
     }
     /** The controller is on place p of the ring (null: nowhere). */
     _focus(p) {
+        if (p && p.tab != null) this.headerAnchor = p.tab;
         this.focusKey = p ? p.k : null;
         this.focusTab = p && p.tab != null ? p.tab : null;
         this.focused = p && p.bar ? p.bar : null;
@@ -421,6 +430,28 @@ class Display {
             // the header's tabs (Settings among them) work over a sheet too
             const tab = !bar && (this.tabs || []).find(inside);
             const tgt = !bar && !tab && !this.sheet ? (this.pageTargets || []).find(inside) : null;
+            // Drag the header horizontally to reveal overflow tabs without selecting one.
+            if (phase === 1) this.tabDrag = tab && !this.sheet ? {x, moved:false, first:this.tabs[0].i, last:this.tabs[this.tabs.length-1].i} : null;
+            if (this.tabDrag && phase === 2 && Math.abs(x - this.tabDrag.x) > 24) {
+                const delta = this.tabDrag.x - x, count = Math.max(1, Math.floor(Math.abs(delta) / 90));
+                const anchor = delta > 0 ? this.tabDrag.last + count : this.tabDrag.first - count;
+                const index = Math.max(0, Math.min(this._tabList().tabs.length - 1, anchor));
+                this.tabDrag.moved = true; this._focus({k:'tab:' + index, tab:index}); this._repaint();
+                return;
+            }
+            if (phase === 3 && this.tabDrag) {
+                const moved = this.tabDrag.moved; this.tabDrag = null;
+                if (moved) { this.ownDown = null; return; }
+            }
+
+            // A focusable continuous control owns its whole gesture, even outside its bounds.
+            if (phase === 1) this.touchTarget = tgt && typeof tgt.touch === 'function' ? tgt : null;
+            if (this.touchTarget) {
+                const held = this.touchTarget;
+                if (phase === 3) this.touchTarget = null;
+                try { held.touch(phase, x, y); } catch (e) { this.log.error('target touch', e); }
+                return;
+            }
             // Pass the entire touch sequence to custom continuous controls, such as
             // colour/brightness sliders. Tabs, the button bar and settings sheets
             // must retain their own touch behaviour.
@@ -720,7 +751,7 @@ class Display {
         const oy = this.place.oy;
         try { this._send(this.app.name, this._compose(), this.app.softImage, true); } catch (e) { this.log.warn('display: repaint ' + e); }
         // the page moved (a sheet closed over a centred page): its claims and tabs follow it
-        if (this.place.oy !== oy && this.chromeRec) this._claimTabs(this.chromeRec.tabRects, null);
+        if (this.chromeRec && (this.own() || this.place.oy !== oy)) this._claimTabs(this.chromeRec.tabRects, null);
     }
 
     /** Remember the last frame: resent as keepalive, or drawn in software when the GPU goes. */
@@ -779,7 +810,7 @@ class Display {
         // right of it the HMI's strip shows through (radio station, phone signal, status icons)
         const hx = HMI.left - pl.x;
         const end = G.header(c, Object.assign({}, t, { bg: HMI.headBg }), hx, 0, HMI.status.x - pl.x - hx, FULL.headH,
-            this.screen.title || this.spec.title, tb.tabs, tb.sel, tb.badges, true, true);
+            this.screen.title || this.spec.title, tb.tabs, tb.sel, tb.badges, true, true, this.headerAnchor == null ? tb.sel : this.headerAnchor);
         // the HMI's own title is in the strip under the header: a narrower header (a sheet: no tabs) stays
         // as wide as the app's widest, so none of that title shows beside it
         if (!this.sheet) this.headMax = Math.max(this.headMax || 0, end);

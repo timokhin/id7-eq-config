@@ -1,77 +1,84 @@
 'use strict';
 const G = require('./kit/gauges');
-const P = require('./presets');
-const C = require('./controls');
-const model = require('./model');
-const FREQ = model.frequencies;
-function draw(r, theme, s, a) {
-    const white = '#eef3fc', dim = '#a3afbd', blue = '#74c7ff';
-    const text = (v, x, y, size, color, opt) => r.text(String(v), x, y, size, color || white, opt);
+const M = require('./profile-model');
+const Tabs = require('./tabs');
+const TOP = 158, BOTTOM = 358;
+function ids(s) { return ['bass'].concat(M.eqIds.filter(id => s.available[id]), ['treble']); }
+function positions(s) { const list = ids(s), left = list.length === 2 ? 490 : 150, right = list.length === 2 ? 1110 : 1450; return list.map((id, i) => ({ id, x: left + (right - left) * i / (list.length - 1) })); }
+function tickAt(y) { return M.tick((TOP + BOTTOM - 2 * y) / (BOTTOM - TOP) * 10); }
+function sliderAt(s, x, y) { if (s.tab < 2 || y < TOP || y > BOTTOM) return null; const p = positions(s).find((v) => Math.abs(v.x - x) < 48); return p && p.id; }
+function draw(r, theme, s, a, store) {
+    const white = '#eef1f6', dim = '#8e99ab', red = '#e52b35';
     const targets = [];
-    function target(key, x, y, w, h, fn) { targets.push({ key, x, y, w, h, act: fn, run: fn }); }
-    r.clear('#080d15');
-    if (!s.setup) {
-        text('PRESETS', 55, 76, 20, dim);
-        text('FREQUENCY PREVIEW', 560, 76, 20, dim);
-        const first = Math.max(0, Math.min(s.selected - 3, model.names.length - 6));
-        const rows = [{name: 'Current values', index: 0}].concat(model.names.slice(first, first + 6).map((name, j) => ({name, index: first + j + 1})));
-        rows.forEach((row, j) => {
-            const name = row.name, i = row.index, y = 93 + j * 51;
-            const slot = i > 0 && i <= model.slotNames.length ? s.store.state.profiles[String(i)] : null;
-            const saved = slot && model.slotValues(slot, s.store.state.bindings);
-            const active = i > 0 && s.ready && (i <= model.slotNames.length
-                ? saved && model.bands.every((c) => saved[c.id] === s.current[c.id])
-                : model.matches(name, s.store.state.bindings, s.current));
-            r.roundRect(42, y, 455, 44, 7, i === s.selected ? '#204769' : '#111c29');
-            text(name, 65, y + 30, 23, i === s.selected ? blue : white);
-            if (active) text('ACTIVE', 475, y + 29, 16, '#78dfad', {align:'right'});
-            else if (i > 0 && i <= model.slotNames.length) text(!slot ? 'EMPTY' : !saved ? 'SETUP CHANGED' : 'SAVED', 475, y + 29, 16, dim, {align:'right'});
-            target('preset' + i, 42, y, 455, 44, () => a.select(i));
-        });
-        const current = s.selected === 0, custom = s.selected > 0 && s.selected <= model.slotNames.length;
-        const slot = custom && s.store.state.profiles[String(s.selected)];
-        const saved = custom && model.slotValues(slot, s.store.state.bindings);
-        const scale = current || custom ? 100 : 12;
-        const values = current ? model.currentValues(s.store.state.bindings, s.current)
-            : custom ? model.currentValues(s.store.state.bindings, saved || {}) : P.forBands(model.names[s.selected - 1], FREQ);
-        const left = 615, step = 128, mid = 255;
-        [scale, 0, -scale].forEach((v) => { const y = mid - v * 108 / scale; r.line(590, y, 1500, y, 1, '#35465a'); text((v > 0 ? '+' : '') + v, 575, y + 6, 16, dim, {align:'right'}); });
-        values.forEach((v, i) => {
-            const x = left + i * step, y = v === null ? mid : mid - v * 108 / scale;
-            if (v !== null) {
-                r.line(x, mid, x, y, 7, blue); r.circle(x, y, 8, white);
-                if (i && values[i - 1] !== null) r.line(x - step, mid - values[i - 1] * 108 / scale, x, y, 2, blue);
-            }
-            text(FREQ[i] >= 1000 ? (FREQ[i] / 1000) + 'k' : FREQ[i], x, 399, 18, dim, {align:'center'});
-            text(v === null ? '--' : (v > 0 ? '+' : '') + v.toFixed(1), x, 430, 18, white, {align:'center'});
-        });
-        text(current ? 'Current position, % of calibrated range' : custom
-            ? !slot ? 'Empty slot - press Save current' : !saved ? 'Calibration changed - save this slot again' : 'Saved position, % of calibrated range'
-            : 'Approximate Winamp curve, dB', 590, 470, 19, dim);
-    } else {
-        const learning = s.store.state.learning, phase = learning ? learning.shots.length : -1;
-        const control = C.CONTROLS[s.band];
-        text('EQUALIZER SETUP', 55, 83, 23, dim);
-        text(control.label, 55, 146, 40, blue);
-        text('Band ' + (s.band + 1) + ' of 7', 55, 183, 23, dim);
-        text(s.store.state.bindings[control.id] ? 'Configured' : 'Not configured', 55, 223, 21, white);
-        text('Use Previous / Next to choose a band.', 55, 285, 21, dim);
-        const instructions = [
-            'Choose a band and press Capture to begin.',
-            'Set this band to the centre in BMW sound settings.',
-            'Set this band to minimum in BMW sound settings.',
-            'Set this band to maximum in BMW sound settings.',
-            'Return this band to its original centre position.'
-        ];
-        text(instructions[phase + 1], 550, 145, 27, white);
-        text('Return here and press Capture after each adjustment.', 550, 198, 21, dim);
-        text('Keep every other sound setting unchanged.', 550, 235, 21, dim);
-        text('Set up all seven bands before applying a preset.', 550, 295, 21, dim);
-        text('Set up exits or cancels the current measurement.', 550, 332, 21, dim);
+    const tabEntries = Tabs.entries(s.available), tabLabels = tabEntries.map(e => e.label), selectedTab = tabEntries.findIndex(e => e.index === s.tab);
+    function text(v,x,y,size,color,opt) { r.text(String(v),x,y,size,color || white,opt); }
+    function button(key,label,x,y,w,fn) { r.roundRect(x,y,w,38,18,'#21242b'); text(label,x+w/2,y+26,17,white,{align:'center'}); targets.push({key,x,y,w,h:38,run:fn}); }
+    r.clear('#050609');
+    r.fillRect(38,71,1524,415,'#101218'); r.fillRect(38,71,25,4,'#76bfff'); r.fillRect(66,71,25,4,'#2874a9'); r.fillRect(94,71,25,4,red); r.line(120,73,1562,73,1,'#b4bac3');
+    if (s.tab === 0) {
+        const d = s.debug, rows = d.rows(), pages = Math.max(1, Math.ceil(rows.length / 8));
+        d.page = Math.min(d.page, pages - 1);
+        text('AUDIO DEBUG',66,111,25,white);
+        button('baseline','CAPTURE BASELINE',360,82,230,a.baseline);
+        button('refresh','REFRESH',602,82,150,a.refresh);
+        button('prev-page','<',1230,82,54,() => a.page(-1));
+        button('next-page','>',1450,82,54,() => a.page(1));
+        text('PAGE ' + (d.page + 1) + ' / ' + pages,1365,109,17,dim,{align:'center'});
+        if (!d.base) text('1. Set audio controls to zero. Capture baseline.',66,175,21,white);
+        else if (!d.current) text('Baseline saved. Press REFRESH to compare.',66,175,21,white);
+        else if (!rows.length) text('No changes. Adjust audio in BMW settings, then press REFRESH.',66,175,21,white);
+        else {
+            text('SCOPE : INSTANCE : KEY',75,155,17,dim); text('BEFORE',1030,155,17,dim); text('AFTER',1300,155,17,dim);
+            rows.slice(d.page * 8, d.page * 8 + 8).forEach((row,i) => {
+                const y=183+i*31;
+                r.line(68,y+9,1515,y+9,1,'#282c35');
+                text(row.id,75,y,19,white); text(row.before,1030,y,19,white); text(row.after,1300,y,19,'#86c9ff');
+            });
+        }
+        const shot = d.current, errors = shot ? shot.errors.length : 0;
+        text('Changed: ' + rows.length + '    Read errors: ' + errors + '    ' + (shot ? shot.scopes.join(', ') : 'No current reading'),66,453,15,errors ? '#ffa955' : dim);
+        text(s.status,66,478,16,s.error ? '#ffa955' : dim);
+        s.targets=targets; r.targets=targets;
+        G.frame(r,theme,tabLabels,selectedTab,[]);
+        return;
     }
-    r.fillRect(0, 492, 1600, 28, '#101d2b');
-    text(s.status, 42, 512, 18, s.error ? '#ffbd69' : dim);
-    s.targets = targets; r.targets = targets;
-    G.frame(r, theme, ['EQ CONFIG'], 0, [{text: s.ready ? 'EQ READY' : s.detected ? 'SETUP NEEDED' : 'EQ UNAVAILABLE', color: s.ready ? blue : dim}]);
+    const label = s.tab === 1 ? 'CURRENT VALUES' : (Tabs.profileName(s.tab) || '').toUpperCase();
+    text(label,66,111,25,white);
+    if (s.available.surround && s.tab === 1) {
+        text('SURROUND  --',1535,108,17,dim,{align:'right'});
+    } else if (s.available.surround) {
+        const on = s.draft.surround;
+        text('SURROUND',1190,103,18,white);
+        r.roundRect(1350,80,100,38,19,on ? '#b32330' : '#383e49');
+        r.roundRect(on ? 1417 : 1355,85,28,28,14,white);
+        text(on ? 'ON' : 'OFF',1490,105,17,on ? white : dim);
+        targets.push({key:'surround',x:1175,y:77,w:345,h:46,r:9,run:a.toggleSurround});
+    }
+    r.line(94,258,1506,258,1,'#4a505b');
+    const ps = positions(s);
+    ps.forEach(({id,x},i) => {
+        const n = M.value(s.draft,id), known = !!s.available[id], y = 258 - n * 10;
+        if (s.editing === id) r.roundRect(x-38,TOP-10,76,BOTTOM-TOP+20,8,'#51212a');
+        r.roundRect(x-16,TOP,32,BOTTOM-TOP,5,'#2b303b');
+        for (let t = -10; t <= 10; t++) { const major = t === 0 || Math.abs(t) === 10 || Math.abs(t) === 5; r.line(x-(major ? 27 : 22),258-t*10,x+(major ? 27 : 22),258-t*10,1,major ? '#a5afbd' : '#626c7a'); }
+        if (known) { r.fillRect(x-13,Math.min(y,258),26,Math.abs(258-y) || 2,'#b32330'); r.roundRect(x-25,y-7,50,14,4,white); }
+        const ix = M.eqIds.indexOf(id), caption = ix < 0 ? id.toUpperCase() : M.frequencies[ix] >= 1000 ? (M.frequencies[ix]/1000)+'k' : M.frequencies[ix];
+        text(caption,x,408,17,dim,{align:'center'}); text(known ? (n > 0 ? '+' : '') + n : '--',x,430,18,white,{align:'center'});
+        if (s.tab >= 2 && known) {
+            const target = { key:'slider-'+id, x:x-38, y:TOP-8, w:76, h:BOTTOM-TOP+16, r:8,
+                run:() => a.toggleEdit(id), touch:(phase, tx, ty) => a.touchEdit(id,ty) };
+            if (s.editing === id) target.turn = (d) => a.edit(id, M.value(s.draft,id) + d);
+            targets.push(target);
+        }
+    });
+    if (s.tab >= 2) {
+        if (s.applyEnabled) button('apply','APPLY',620,435,130,a.apply);
+        else { r.roundRect(620,435,130,38,18,'#1a1c21'); text('APPLY',685,461,17,'#5a5f68',{align:'center'}); }
+        button('save','SAVE',765,435,130,a.save);
+        if (Tabs.isPreset(s.tab) && store.profiles[Tabs.profileName(s.tab)]) button('reset','RESET',910,435,130,a.reset);
+    }
+    text(s.status,66,478,16,s.error ? '#ffa955' : dim);
+    s.targets=targets; r.targets=targets;
+    G.frame(r,theme,tabLabels,selectedTab,[]);
 }
-module.exports = { draw, FREQ };
+module.exports = {draw,sliderAt,tickAt};

@@ -5,12 +5,12 @@ var presets = require('./preset-data');
 var frequencies = [70, 180, 320, 600, 1000, 3000, 6000, 12000, 14000, 16000];
 
 function toDb(value) {
-    if (typeof value !== 'number' || value < 1 || value > 64) throw new Error('Invalid Winamp level');
+    if (typeof value !== 'number' || value < 1 || value > 64) throw new Error('Invalid preset level');
     return value >= 33 ? (value - 33) * 12 / 31 : (value - 33) * 12 / 32;
 }
 
 // Approximation at the target centre frequency, linear in log-frequency.
-// The resulting curve is not an exact acoustic match to Winamp's filters.
+// The original and target filters can have different acoustic responses.
 function interpolate(levels, frequency) {
     if (!Array.isArray(levels) || levels.length !== frequencies.length ||
         typeof frequency !== 'number' || !isFinite(frequency) || frequency <= 0) throw new Error('Invalid frequency or levels');

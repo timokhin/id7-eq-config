@@ -670,6 +670,16 @@ function tabWidths(cv, names, size, opt, min, pad, room, pad0) {
     const p = Math.max(pad0, Math.min(pad, (room - tw.reduce((a, b) => a + b, 0)) / Math.max(1, names.length)));
     return tw.map((w) => w + p);
 }
+// Keep the focused tab visible while retaining its original index for input routing.
+function tabWindow(widths, room, anchor) {
+    if (!widths.length) return {start:0, end:0};
+    anchor = Math.max(0, Math.min(widths.length - 1, anchor | 0));
+    let start = anchor, used = widths[anchor];
+    while (start > 0 && used + widths[start-1] <= room) used += widths[--start];
+    let end = anchor + 1;
+    while (end < widths.length && used + widths[end] <= room) used += widths[end++];
+    return {start,end};
+}
 function frame(cv, t, tabs, sel, badges) {
     if (cv.chrome) { cv.chrome.tabs = { tabs: tabs || [], sel, badges: (badges || []).filter(Boolean) }; return; }
     const W = cv.w, S = t.sel || t.accent;
@@ -682,8 +692,10 @@ function frame(cv, t, tabs, sel, badges) {
     const badgesW = live.reduce((a, b) => a + Math.max(24 * 3.5, cv.textWidth(b.text, 18, opt) + 24) + 24 * 0.4, 0);
     const widths = tabWidths(cv, labels, 20, opt, 150, 48, W - 32 - badgesW, 20);
     let x = 16;
+    const window = tabWindow(widths, W - 32 - badgesW, sel);
     cv.tabRects = [];
     labels.forEach((label, i) => {
+        if (i < window.start || i >= window.end) return;
         const tw = widths[i], on = i === sel;
         cv.tabRects.push({ i, x, y: 0, w: tw, h: BAR_H });
         if (on) {
@@ -718,8 +730,8 @@ function badgeRow(cv, t, xr, y, h, size, badges) {
  * HMI's own status strip (radio station, phone signal, icons) can show to the right of it.
  * Returns the x where the header's content ends.
  */
-function header(cv, t, x, y, w, h, title, tabs, sel, badges, flat, compact) {
-    if (compact) return headerCompact(cv, t, x, y, w, h, title, tabs, sel, badges);
+function header(cv, t, x, y, w, h, title, tabs, sel, badges, flat, compact, anchor) {
+    if (compact) return headerCompact(cv, t, x, y, w, h, title, tabs, sel, badges, anchor);
     const S = t.sel || t.accent, opt = { align: 'center', font: 'bold', spacing: 2 };
     cv.fillRect(x, y, w, h, t.bg);
     // flat: plain, to match the HMI's own black strip next to it
@@ -750,7 +762,7 @@ function header(cv, t, x, y, w, h, title, tabs, sel, badges, flat, compact) {
     });
 }
 
-function headerCompact(cv, t, x, y, w, h, title, tabs, sel, badges) {
+function headerCompact(cv, t, x, y, w, h, title, tabs, sel, badges, anchor) {
     const S = t.sel || t.accent, opt = { align: 'center', font: 'bold', spacing: 1.6 };
     const bopt = { align: 'center', font: 'bold', spacing: 1.5 };
     const names = (tabs || []).map((n) => upperText(n));
@@ -762,9 +774,10 @@ function headerCompact(cv, t, x, y, w, h, title, tabs, sel, badges) {
     const tw = tabWidths(cv, names, 18, opt, 132, 44, room - 20, 20);
     const tabsW = tw.reduce((a, b) => a + b, 0);
     const showTitle = title && titleW + 32 + tabsW <= room;
+    const window = tabWindow(tw, room - 20 - (showTitle ? titleW + 32 : 0), anchor == null ? sel : anchor);
     // only as wide as the content: the rest of the strip stays the HMI's
     let end = x + 20 + (showTitle ? titleW + 32 : 0);
-    names.forEach((n, i) => { if (end + tw[i] <= x + room) end += tw[i]; });
+    names.forEach((n, i) => { if (i >= window.start && i < window.end && end + tw[i] <= x + room) end += tw[i]; });
     end = Math.min(x + w, end + (badgesW ? 12 + badgesW : 0) + 16);
     cv.fillRect(x, y, end - x, h, t.bg);
     cv.fillRect(x, y + h - 2, end - x, 2, withAlpha('#ffffff', 0.22));
@@ -775,6 +788,7 @@ function headerCompact(cv, t, x, y, w, h, title, tabs, sel, badges) {
     }
     cv.tabRects = [];
     names.forEach((n, i) => {
+        if (i < window.start || i >= window.end) return;
         const on = i === sel, bw = tw[i];
         if (tx + bw > x + room) return;
         cv.tabRects.push({ i, x: tx, y, w: bw, h });
