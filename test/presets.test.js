@@ -1,0 +1,15 @@
+'use strict';
+var assert = require('assert');
+var eq = require('../apps/getproger_eq_config/presets');
+assert.deepStrictEqual([eq.toDb(1), eq.toDb(33), eq.toDb(64)], [-12, 0, 12]);
+assert(eq.names.indexOf('Rock') !== -1);
+assert(eq.names.indexOf('Classical') !== -1);
+var rock = eq.forBands('Rock', eq.frequencies);
+assert.strictEqual(rock.length, 10);
+assert(rock[0] > 0 && rock[3] < 0);
+assert.strictEqual(eq.forBands('Rock', [1])[0], rock[0]);
+assert.strictEqual(eq.forBands('Rock', [30000])[0], rock[9]);
+assert.throws(function () { eq.forBands('unknown', [100]); });
+assert.throws(function () { eq.forBands('Rock', [0]); });
+assert.throws(function () { eq.forBands('Rock', []); });
+console.log('Preset tests passed');

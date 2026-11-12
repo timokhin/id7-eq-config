@@ -1,0 +1,25 @@
+{
+  "id": "getproger_eq_config",
+  "title": "EQ Config",
+  "description": "Winamp genre presets for a calibrated BMW equalizer",
+  "version": "0.0.1", "vendor": "GetProger", "loggingId": "EQCF", "iconGlyph": "EQ",
+  "signals": {
+    "org.genivi.am.commandinterface.CommandControl": {
+      "_instances": "1", "_optional": "Audio manager unavailable",
+      "_methods": ["getListMainSinks", "getListMainSinkSoundProperties", "setMainSinkSoundProperty", "getListSystemProperties", "setSystemProperty"],
+      "_broadcasts": ["mainSinkSoundPropertyChanged", "systemPropertyChanged"]
+    },
+    "de.bmw.infotainment.am.carequalizing.CarSpecificEqualizingData": {
+      "_instances": ["1", "2"], "_optional": "Vehicle EQ data unavailable",
+      "_methods": ["getAllEQData", "getEQData", "setEQData"], "_broadcasts": ["eqDataChanged"]
+    }
+  },
+  "screens": [{"name": "MAIN", "kind": "canvas", "title": "EQ Config", "buttons": [
+    ["BTN_PREVIOUS", "Previous"], ["BTN_NEXT", "Next"], ["BTN_APPLY", "Apply"], ["BTN_SAVE", "Save current"],
+    ["BTN_SETUP", "Set up"], ["BTN_CAPTURE", "Capture"], ["BTN_REFRESH", "Refresh"]
+  ]}],
+  "settings": [
+    {"key": "layout", "label": "Layout", "type": "choice", "default": "standard", "options": [["standard", "Standard"], ["full", "Full screen"]]},
+    {"key": "renderer", "label": "Renderer", "type": "choice", "default": "auto", "options": [["auto", "Automatic"], ["software", "Software"]]}
+  ]
+}
