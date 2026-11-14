@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('assert'),O=require('../apps/getproger_eq_config/observed-controls'),M=require('../apps/getproger_eq_config/profile-model'),T=require('../apps/getproger_eq_config/tabs');
+const raw={2:-8,3:8,6:-7,7:-5,8:-3,9:-1,10:1,11:3,12:5,14:1};
+const shot={scopes:['sink:1'],points:Object.keys(raw).map(key=>({kind:'sink',entity:1,key:Number(key),value:raw[key]}))};
+const values=O.read(shot);
+assert.deepStrictEqual(values,{bass:-8,treble:8,eq100:-7,eq200:-5,eq500:-3,eq1k:-1,eq2k:1,eq5k:3,eq10k:5,surround:true});
+const p=M.fromTicks(values,M.defaults(''));assert.deepStrictEqual(p.eq,[-7,-5,-3,-1,1,3,5]);assert(p.surround);
+assert.deepStrictEqual(O.read({...shot,scopes:[]}),{});
+assert.strictEqual(O.read({...shot,points:shot.points.filter(p=>p.key!==8)}).eq500,undefined);
+assert.strictEqual(O.read({...shot,points:shot.points.map(p=>p.key===8?{...p,value:11}:p)}).eq500,undefined);
+const absent=O.read({...shot,points:shot.points.filter(p=>p.key!==14)});assert.strictEqual(absent.surround,undefined);assert.strictEqual(absent.eq100,-7);
+assert(!('learned' in values),'Observation must never be a writable binding');
+console.log('PASS observed read-only mapping, optional surround, and incomplete signatures');

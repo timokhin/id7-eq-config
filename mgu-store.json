@@ -2,7 +2,7 @@
   "apps": {
     "getproger_eq_config": {
       "title": "eq_config",
-      "description": "Audio settings and read-only diagnostics for BMW MGU",
+      "description": "Audio profiles and sound scene for BMW MGU",
       "author": "timokhin",
       "icon": "eq_config.png"
     }

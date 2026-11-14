@@ -21,8 +21,8 @@ function compare(base, current) {
     }, []);
 }
 class Debug {
-    constructor(dir, log) {
-        this.file = path.join(dir, 'audio-debug-baseline.json'); this.base = null; this.current = null; this.page = 0;
+    constructor(dir, log, suffix) {
+        this.file = path.join(dir, 'audio-debug-baseline' + (suffix ? '-' + suffix : '') + '.json'); this.base = null; this.current = null; this.page = 0;
         try { this.base = validate(JSON.parse(fs.readFileSync(this.file, 'utf8'))); }
         catch (e) { if (e.code !== 'ENOENT') log.warn('Debug baseline: ' + e.message); }
     }

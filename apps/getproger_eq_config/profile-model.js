@@ -23,5 +23,11 @@ function fromCurrent(current, bindings, fallback) {
     controls.forEach((id) => { const n = C.normalized(bindings[id], current[id]); if (n !== null) set(p, id, n * 10); });
     return p;
 }
+function fromTicks(current, fallback) {
+    const p = JSON.parse(JSON.stringify(fallback));
+    controls.forEach((id) => { if (Number.isInteger(current[id])) set(p, id, current[id]); });
+    if (typeof current.surround === 'boolean') p.surround = current.surround;
+    return p;
+}
 function equal(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
-module.exports = { frequencies, eqIds, controls, names, defaults, valid, value, set, fromCurrent, equal, tick };
+module.exports = { frequencies, eqIds, controls, names, defaults, valid, value, set, fromCurrent, fromTicks, equal, tick };

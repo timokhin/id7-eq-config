@@ -125,7 +125,8 @@ class Audio {
                 originals[id] = raw;
             }
             for (const id of ids) {
-                if (draft[id] === originals[id]) continue;
+                // Earlier tone writes can change other controls, even when their original value matched.
+                if (await this.readBinding(bindings[id]) === draft[id]) continue;
                 attempted.push(id); // A timed-out write might still have reached the provider.
                 await this.writePoint(bindings[id], draft[id]);
                 await this.verify(bindings[id], draft[id]);
@@ -135,11 +136,11 @@ class Audio {
             return { count: attempted.length };
         } catch (e) {
             const failed = [];
-            for (const id of attempted.slice().reverse()) {
+            for (const id of attempted.length ? ids : []) {
                 try { await this.writePoint(bindings[id], originals[id]); await this.verify(bindings[id], originals[id]); }
                 catch (restoreError) { failed.push(id); this.note(restoreError); }
             }
-            for (const id of attempted) {
+            for (const id of attempted.length ? ids : []) {
                 try { await this.verify(bindings[id], originals[id]); }
                 catch (restoreError) { if (failed.indexOf(id) < 0) failed.push(id); this.note(restoreError); }
             }

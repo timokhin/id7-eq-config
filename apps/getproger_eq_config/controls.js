@@ -8,6 +8,7 @@ const CONTROLS = [
     { id: 'eq2k', label: '2 kHz', group: 'eq' },
     { id: 'eq5k', label: '5 kHz', group: 'eq' },
     { id: 'eq10k', label: '10 kHz', group: 'eq' },
+    { id: 'surround', label: 'Surround', group: 'switch' },
     { id: 'bass', label: 'Bass', group: 'tone' },
     { id: 'treble', label: 'Höhen', group: 'tone' },
     { id: 'balance', label: 'Balance', group: 'tone' },
@@ -33,6 +34,10 @@ function index(points) {
     return out;
 }
 function validBinding(b) {
+    if (b && b.source === 'observed-v1') {
+        const keys = {bass:2,treble:3,balance:4,fader:5,eq100:6,eq200:7,eq500:8,eq1k:9,eq2k:10,eq5k:11,eq10k:12,surround:14};
+        return keys[b.control] === b.key && b.kind === 'sink' && b.entity === 1 && b.id === pointId(b) && b.center === 0 && b.direction === 1 && b.low === (b.control === 'surround' ? 0 : -10) && b.high === (b.control === 'surround' ? 1 : 10);
+    }
     return !!b && CONTROLS.some((c) => c.id === b.control) && validPoint(Object.assign({}, b, { value: b.center }))
         && b.id === pointId(b) && rawValue(b.low) && rawValue(b.high) && b.low < b.high
         && b.center > b.low && b.center < b.high && (b.direction === 1 || b.direction === -1)
