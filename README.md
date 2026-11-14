@@ -6,8 +6,6 @@ EQ Config is an audio configuration app for BMW iDrive 7 / MGU. It provides edit
 
 ## Screenshots
 
-These are rendered UI previews; diagnostic controls are hidden in the images.
-
 ### Profiles
 
 Choose a profile to apply it immediately. The active profile has a check mark. Adjust the frequency bars to apply and save changes; **Reset** restores the original profile. Three custom slots are available.
