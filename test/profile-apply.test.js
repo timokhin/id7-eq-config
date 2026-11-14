@@ -3,21 +3,20 @@ const assert=require('assert'),fs=require('fs'),os=require('os'),path=require('p
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'eq-live-'));let start,state,actions,scroll;
 const old=Module._load;Module._load=function(name,parent){if(parent&&/getproger_eq_config\/main\.js$/.test(parent.filename)){if(name==='./kit/mgu')return {run(spec){start=spec.start;}};if(name==='./view')return {draw(r,t,s,a){state=s;actions=a;}};}return old.apply(this,arguments);};
 require('../apps/getproger_eq_config/main');Module._load=old;
-const vals={2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0,11:0,12:0,14:0},writes=[];
-const settings={values:{audioType:'harman',showDebug:false},get(k){return this.values[k];},set(k,v){this.values[k]=v;}};
-const ctx={dataDir:dir,settings,log:{warn(){},info(){}},signals:{async proxy(iface){if(iface.includes('CommandControl'))return {};throw Error('absent');},async on(){},async call(p,method,args){
+const vals={2:0,3:0,4:0,5:0,6:0,7:0,8:0,9:0,10:0,11:0,12:0,14:0,15:0},writes=[];
+const settings={values:{audioType:'harman',showDebug:true},get(k){return this.values[k];},set(k,v){this.values[k]=v;}};
+const ctx={dataDir:dir,settings,display:{focusKey:null,focusTab:null,focused:null},log:{warn(){},info(){}},signals:{async proxy(iface){if(iface.includes('CommandControl'))return {};throw Error('absent');},async on(){},async call(p,method,args){
  if(method==='getListSystemProperties')return {amError:0,listSystemProperties:[]};if(method==='getListMainSinks')return {amError:0,listMainSinks:[{sinkID:1}]};
  if(method==='getListMainSinkSoundProperties')return {amError:0,listSoundProperties:Object.keys(vals).map(k=>({type:Number(k),value:vals[k]}))};
  if(method==='setMainSinkSoundProperty'){vals[args.soundProperty.type]=args.soundProperty.value;writes.push(args.soundProperty);return {amError:0};}throw Error(method);
 }},ui:{onVisible(){},isVisible(){return true;},async image(){}},onTab(){},onScroll(fn){scroll=fn;},onTouch(){},onTap(){},canvas(){return {};},theme(){return {};},loop(k,n,fn){return {kick(){fn();}};}};
 const pause=()=>new Promise(r=>setTimeout(r,150));
-(async()=>{start(ctx);await pause();assert.strictEqual(writes.length,0);assert(state.available.balance&&state.available.fader);assert.strictEqual(state.showDebug,false);
- assert.strictEqual(scroll(350),true);assert.strictEqual(state.profileScroll,350);assert.strictEqual(scroll(10),false);assert.strictEqual(scroll(-350),true);actions.profile('Rock');await pause();assert.strictEqual(state.active,'Rock');assert(writes.length>0);
+(async()=>{start(ctx);await pause();assert.strictEqual(writes.length,0);assert(state.available.balance&&state.available.fader);assert.strictEqual(state.showDebug,undefined);
+ state.profileScroll=0;assert.strictEqual(actions.navigateProfile(5,1),true);assert.strictEqual(ctx.display.focusKey,'tgt:profile-6');assert.strictEqual(state.profileScroll,50);state.profileScroll=0;assert.strictEqual(scroll(350),true);assert.strictEqual(state.profileScroll,350);assert.strictEqual(scroll(10),false);assert.strictEqual(scroll(-350),true);actions.profile('Rock');await pause();assert.strictEqual(state.active,'Rock');assert(writes.length>0);
  actions.edit('bass',4);await pause();assert.strictEqual(vals[2],4);assert.strictEqual(JSON.parse(fs.readFileSync(path.join(dir,'profiles-v2.json'))).profiles.Rock.bass,4);assert.strictEqual(state.active,'Rock');
- actions.tab(1);assert.strictEqual(state.tab,'Scene');actions.edit('balance',-7);actions.edit('fader',7);await pause();assert.strictEqual(vals[4],-7);assert.strictEqual(vals[5],7);assert.deepStrictEqual(state.scene,{balance:-7,fader:7});
+ actions.tab(1);assert.strictEqual(state.tab,'Scene');actions.edit('balance',-7);actions.edit('fader',7);await pause();assert.strictEqual(vals[4],-7);assert.strictEqual(vals[5],-7);assert.deepStrictEqual(state.scene,{balance:-7,fader:7});
  actions.resetScene();await pause();assert.strictEqual(vals[4],0);assert.strictEqual(vals[5],0);
- actions.tab(2);actions.toggleSurround();await pause();assert.strictEqual(vals[14],1);
+ actions.tab(2);actions.toggleSurround();await pause();assert.strictEqual(vals[14],1);actions.edit('surroundLevel',2);await pause();assert.strictEqual(vals[15],2);actions.edit('surroundLevel',-2);await pause();assert.strictEqual(vals[15],-2);
  actions.tab(3);actions.audioType('stereo');assert.deepStrictEqual(require('../apps/getproger_eq_config/tabs').entries(state.audioType),['Scene','Settings']);assert.strictEqual(settings.values.audioType,'stereo');
- actions.toggleDebug();assert(state.showDebug);actions.tab(0);assert.strictEqual(state.tab,'Debug');actions.capture();await pause();assert(fs.existsSync(path.join(dir,'audio-debug-baseline-surround.json')));
- console.log('PASS live profile, saved edits, scene, surround, audio type and diagnostic capture');
+ console.log('PASS live profile, saved edits, scene, surround, audio type and surround level');
 })().then(()=>fs.rmSync(dir,{recursive:true,force:true}),e=>{console.error(e);fs.rmSync(dir,{recursive:true,force:true});process.exitCode=1;});

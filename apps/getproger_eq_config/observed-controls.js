@@ -9,6 +9,6 @@ function read(shot) {
  return values;
 }
 function bindings() {
- const result={};Object.keys(keys).concat('surround').forEach(id=>{const key=id==='surround'?14:keys[id];result[id]={id:'sink:1:'+key,kind:'sink',entity:1,key,control:id,center:0,low:id==='surround'?0:-10,high:id==='surround'?1:10,direction:1,source:'observed-v1'};});return result;
+ const result={};Object.keys(keys).concat(['surround','surroundLevel']).forEach(id=>{const key=id==='surround'?14:id==='surroundLevel'?15:keys[id];result[id]={id:'sink:1:'+key,kind:'sink',entity:1,key,control:id,center:0,low:id==='surround'?0:id==='surroundLevel'?-2:-10,high:id==='surround'?1:id==='surroundLevel'?2:10,direction:id==='fader'?-1:1,source:'observed-v1'};});return result;
 }
 module.exports={read,bindings};

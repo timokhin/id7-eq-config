@@ -6,7 +6,7 @@
       "kind": "app",
       "title": "eq_config",
       "description": "Audio profiles for BMW MGU",
-      "version": "0.0.4",
+      "version": "0.0.5",
       "path": "apps/getproger_eq_config",
       "icon": "icon.png",
       "mguHmi": [

@@ -245,7 +245,7 @@ class Display {
     _ring() {
         const tl = this._tabList();
         const tabs = tl.tabs.length > 1 || tl.settings >= 0 ? tl.tabs.map((x, i) => ({ k: 'tab:' + i, tab: i })) : [];
-        const scroll = this.pageScroll && this.onScroll ? [{ k: 'scroll', scroll: true }] : [];
+        const scroll = this.pageScroll && !this.pageScroll.focusItems && this.onScroll ? [{ k: 'scroll', scroll: true }] : [];
         const tgts = (this.pageTargets || []).map((q) => ({ k: 'tgt:' + q.key, tgt: q }));
         const top = this.pageScroll && this.pageScroll.y != null ? this.pageScroll.y : -Infinity;
         const over = tgts.filter((p) => p.tgt.y + p.tgt.h <= top);
@@ -346,6 +346,10 @@ class Display {
         if (editingTarget && !press) {
             if (d) { try { editingTarget.turn(d); } catch (e) { this.log.error('target turn', e); } this._repaint(); }
             if (d || tilt) return;
+        }
+        const focusedTarget = (this.pageTargets || []).find((q) => 'tgt:' + q.key === this.focusKey);
+        if (!press && d && focusedTarget && typeof focusedTarget.navigate === 'function') {
+            try { if (focusedTarget.navigate(d)) { this._repaint(); return; } } catch (e) { this.log.error('target navigation', e); }
         }
         // pushed up / down / left / right: the nearest place that way; left with nothing there goes back (leaves the app)
         if (tilt) {
@@ -593,6 +597,11 @@ class Display {
                     pl.extra = Math.floor((h - PAGE_GAP - pl.oyTop) / s - PAGE.h);
                     if (this.reaches) pl.oy = pl.oyTop;     // as the last frame was (it may draw in screen pixels, r.place)
                 }
+            }
+            if (this.screen && this.screen.contentAlign === 'top') {
+                pl.oy = Math.round(this.headH() + PAGE_GAP - src.y * s);
+                if (pl.oyMid != null) pl.oyMid = pl.oy;
+                if (pl.oyTop != null) pl.oyTop = pl.oy;
             }
         }
         this.place = pl;

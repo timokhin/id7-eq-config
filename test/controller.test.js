@@ -24,3 +24,17 @@ td._touch(1,15,15);td._touch(2,70,80);td._touch(3,70,80);assert.deepStrictEqual(
 let opened=0,repaints=0;const h=Object.create(Display.prototype);Object.assign(h,{place:{scale:1,ox:0,oy:0,h:520,x:0},sheet:null,touchTarget:null,tabs:[{i:0,x:0,y:0,w:100,h:40},{i:1,x:100,y:0,w:100,h:40}],pageTargets:[],own(){return true;},barH(){return 0;},buttons(){return [];},_tabList(){return {tabs:['Debug','Current','Rock','Pop']};},_repaint(){repaints++;},_openTab(){opened++;},log:{error(e){throw e;}}});
 h._touch(1,120,20);h._touch(2,25,20);h._touch(3,25,20);assert.strictEqual(h.focusTab,2);assert.strictEqual(h.headerAnchor,2);assert.strictEqual(opened,0);assert(repaints);
 console.log('PASS rotary focus, edit, press-to-finish, navigation, and captured touch drag');
+
+// Every profile remains individually focusable as the list scrolls in both directions.
+const names=Array.from({length:13},(_,i)=>'Item '+i);
+s.names=names;s.selected='Item 5';s.active='Item 5';s.draft=M.defaults('');s.profileScroll=0;s.editing=null;
+let listDisplay;
+a.navigateProfile=(i,d)=>{const next=Math.max(0,Math.min(names.length-1,i+d));if(next===i)return false;const first=Math.floor(s.profileScroll/50);s.profileScroll=(next<first?next:next>=first+6?next-5:first)*50;listDisplay.focusKey='tgt:profile-'+next;drawList();return true;};
+function drawList(){view.draw(c,{},s,a);listDisplay.pageTargets=s.targets;listDisplay.pageScroll=c.scroll;}
+listDisplay=Object.create(Display.prototype);Object.assign(listDisplay,{focusKey:'tgt:profile-0',ccuLast:null,sheet:null,log:{error(e){throw e;}},_tabList(){return {tabs:[],sel:0,settings:-1};},_repaint(){},buttons(){return [];},onScroll(){return true;}});drawList();
+assert(!listDisplay._ring().some(x=>x.scroll),'Scrolling must not intercept focus before the rows');
+const lc=(k)=>listDisplay._ccu({frontRotaryEncoderOperation:k,frontRotaryEncoderPushButton:0,frontRotaryEncoderDeflection:0});lc(0);
+for(let i=1;i<13;i++){lc(i);assert.strictEqual(listDisplay.focusKey,'tgt:profile-'+i);assert(listDisplay.pageTargets.some(x=>x.key==='profile-'+i));}
+for(let i=11;i>=0;i--){lc(i);assert.strictEqual(listDisplay.focusKey,'tgt:profile-'+i);assert(listDisplay.pageTargets.some(x=>x.key==='profile-'+i));}
+assert.strictEqual(s.selected,'Item 5','Moving focus must not apply a profile');
+console.log('PASS focus remains visible through the full scrolling profile list');

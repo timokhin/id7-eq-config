@@ -35,8 +35,8 @@ function index(points) {
 }
 function validBinding(b) {
     if (b && b.source === 'observed-v1') {
-        const keys = {bass:2,treble:3,balance:4,fader:5,eq100:6,eq200:7,eq500:8,eq1k:9,eq2k:10,eq5k:11,eq10k:12,surround:14};
-        return keys[b.control] === b.key && b.kind === 'sink' && b.entity === 1 && b.id === pointId(b) && b.center === 0 && b.direction === 1 && b.low === (b.control === 'surround' ? 0 : -10) && b.high === (b.control === 'surround' ? 1 : 10);
+        const keys = {bass:2,treble:3,balance:4,fader:5,eq100:6,eq200:7,eq500:8,eq1k:9,eq2k:10,eq5k:11,eq10k:12,surround:14,surroundLevel:15};
+        return keys[b.control] === b.key && b.kind === 'sink' && b.entity === 1 && b.id === pointId(b) && b.center === 0 && b.direction === (b.control === 'fader' ? -1 : 1) && b.low === (b.control === 'surround' ? 0 : b.control === 'surroundLevel' ? -2 : -10) && b.high === (b.control === 'surround' ? 1 : b.control === 'surroundLevel' ? 2 : 10);
     }
     return !!b && CONTROLS.some((c) => c.id === b.control) && validPoint(Object.assign({}, b, { value: b.center }))
         && b.id === pointId(b) && rawValue(b.low) && rawValue(b.high) && b.low < b.high

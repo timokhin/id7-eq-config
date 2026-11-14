@@ -9,6 +9,9 @@ const s={audioType:'harman',tab:'Profiles',names:['Classical','Rock'],selected:'
 view.draw(canvas,{},s,a);assert.deepStrictEqual(header.tabs,['Profiles','Scene','Surround','Settings']);assert(s.targets.some(x=>x.key==='profile-1'));assert.deepStrictEqual(s.targets.filter(x=>x.key.startsWith('slider-')).map(x=>x.key),['slider-bass','slider-eq100','slider-treble']);
 s.names=Array.from({length:13},(_,i)=>'Profile '+i);s.profileScroll=350;view.draw(canvas,{},s,a);assert(s.targets.some(x=>x.key==='profile-12'));assert(!s.targets.some(x=>x.key==='profile-0'));assert(canvas.scroll);
 s.tab='Scene';view.draw(canvas,{},s,a);assert(s.targets.some(x=>x.key==='reset-scene'));assert(s.targets.some(x=>x.key==='slider-balance'));assert(s.targets.some(x=>x.key==='slider-fader'));
-s.tab='Surround';view.draw(canvas,{},s,a);assert(s.targets.some(x=>x.key==='surround'));assert(!s.targets.some(x=>x.key==='slider-surroundLevel'));
-s.audioType='stereo';s.tab='Settings';view.draw(canvas,{},s,a);assert.deepStrictEqual(header.tabs,['Scene','Settings']);assert(s.targets.some(x=>x.key==='debug-toggle'));
+s.tab='Surround';view.draw(canvas,{},s,a);assert(s.targets.some(x=>x.key==='surround'));assert(!s.targets.some(x=>x.key==='slider-surroundLevel'));s.available.surroundLevel=true;s.surroundLevel=2;view.draw(canvas,{},s,a);assert(s.targets.some(x=>x.key==='slider-surroundLevel'));
+assert.deepStrictEqual([0,80,230,380,530,680,800].map(view.levelAt),[-2,-2,-1,0,1,2,2]);
+let touched; a.edit=(id,value)=>{touched=[id,value];};
+const surroundSlider=s.targets.find(x=>x.key==='slider-surroundLevel');surroundSlider.touch(1,230,315);assert.deepStrictEqual(touched,['surroundLevel',-1]);surroundSlider.touch(2,680,315);assert.deepStrictEqual(touched,['surroundLevel',2]);
+s.audioType='stereo';s.tab='Settings';view.draw(canvas,{},s,a);assert.deepStrictEqual(header.tabs,['Scene','Settings']);assert(!s.targets.some(x=>x.key==='debug-toggle'));
 console.log('PASS profiles, scene, surround and audio type views');

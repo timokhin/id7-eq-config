@@ -2,7 +2,7 @@
   "id": "getproger_eq_config",
   "title": "EQ Config",
   "description": "Audio profiles for BMW MGU",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "vendor": "GetProger",
   "loggingId": "EQCF",
   "iconGlyph": "EQ",
@@ -43,7 +43,8 @@
       "name": "MAIN",
       "kind": "canvas",
       "title": "EQ Config",
-      "buttons": []
+      "buttons": [],
+      "contentAlign": "top"
     }
   ],
   "settings": [
@@ -62,12 +63,6 @@
           "Harman Kardon"
         ]
       ]
-    },
-    {
-      "key": "showDebug",
-      "label": "Show Debug",
-      "type": "bool",
-      "default": false
     },
     {
       "key": "layout",
